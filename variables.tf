@@ -75,8 +75,8 @@ variable "security_group_rules" {
     }
   ]
   description = <<-EOT
-    A list of maps of Security Group rules. 
-    The values of map is fully complated with `aws_security_group_rule` resource. 
+    A list of maps of Security Group rules.
+    The values of map is fully complated with `aws_security_group_rule` resource.
     To get more info see https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule .
   EOT
 }
@@ -121,4 +121,10 @@ variable "eip_enabled" {
   type        = bool
   description = "Whether to provision and attach an Elastic IP to be used as the SFTP endpoint. An EIP will be provisioned per subnet."
   default     = false
+}
+
+variable "permissions_boundary" {
+  type        = string
+  description = "The ARN of a role to use as a permissions boundary for the created roles"
+  default     = null
 }

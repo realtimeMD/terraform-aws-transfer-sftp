@@ -207,6 +207,8 @@ resource "aws_iam_role" "s3_access_for_sftp_users" {
 
   assume_role_policy  = join("", data.aws_iam_policy_document.assume_role_policy[*].json)
   managed_policy_arns = [aws_iam_policy.s3_access_for_sftp_users[index(local.user_names, each.value)].arn]
+
+  permissions_boundary = var.permissions_boundary
 }
 
 resource "aws_iam_policy" "logging" {
@@ -222,4 +224,6 @@ resource "aws_iam_role" "logging" {
   name                = module.logging_label.id
   assume_role_policy  = join("", data.aws_iam_policy_document.assume_role_policy[*].json)
   managed_policy_arns = [join("", aws_iam_policy.logging[*].arn)]
+
+  permissions_boundary = var.permissions_boundary
 }
