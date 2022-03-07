@@ -3,8 +3,6 @@ locals {
 
   is_vpc                 = var.vpc_id != null
   security_group_enabled = module.this.enabled && var.security_group_enabled
-  user_names             = keys(var.sftp_users)
-  user_names_map         = { for idx, user in local.user_names : idx => user }
 }
 
 data "aws_s3_bucket" "landing" {
@@ -42,9 +40,9 @@ resource "aws_transfer_user" "default" {
   for_each = local.enabled ? var.sftp_users : {}
 
   server_id = join("", aws_transfer_server.default[*].id)
-  role      = aws_iam_role.s3_access_for_sftp_users[index(local.user_names, each.value.user_name)].arn
+  role      = aws_iam_role.s3_access_for_sftp_users[each.key].arn
 
-  user_name = each.value.user_name
+  user_name = each.key
 
   home_directory_type = var.restricted_home ? "LOGICAL" : "PATH"
 
@@ -129,7 +127,7 @@ data "aws_iam_policy_document" "assume_role_policy" {
 }
 
 data "aws_iam_policy_document" "s3_access_for_sftp_users" {
-  for_each = local.enabled ? local.user_names_map : {}
+  for_each = local.enabled ? var.sftp_users : {}
 
   statement {
     sid    = "AllowListingOfUserFolder"
@@ -159,7 +157,7 @@ data "aws_iam_policy_document" "s3_access_for_sftp_users" {
     ]
 
     resources = [
-      "${join("", data.aws_s3_bucket.landing[*].arn)}/${each.value}/*"
+      "${join("", data.aws_s3_bucket.landing[*].arn)}/${each.key}/*"
     ]
   }
 }
@@ -183,30 +181,30 @@ data "aws_iam_policy_document" "logging" {
 }
 
 module "iam_label" {
-  for_each = local.enabled ? local.user_names_map : {}
+  for_each = local.enabled ? var.sftp_users : {}
 
   source  = "cloudposse/label/null"
   version = "0.25.0"
 
-  attributes = ["transfer", "s3", each.value]
+  attributes = ["transfer", "s3", each.key]
 
   context = module.this.context
 }
 
 resource "aws_iam_policy" "s3_access_for_sftp_users" {
-  for_each = local.enabled ? local.user_names_map : {}
+  for_each = local.enabled ? var.sftp_users : {}
 
-  name   = module.iam_label[index(local.user_names, each.value)].id
-  policy = data.aws_iam_policy_document.s3_access_for_sftp_users[index(local.user_names, each.value)].json
+  name   = module.iam_label[each.key].id
+  policy = data.aws_iam_policy_document.s3_access_for_sftp_users[each.key].json
 }
 
 resource "aws_iam_role" "s3_access_for_sftp_users" {
-  for_each = local.enabled ? local.user_names_map : {}
+  for_each = local.enabled ? var.sftp_users : {}
 
-  name = module.iam_label[index(local.user_names, each.value)].id
+  name = module.iam_label[each.key].id
 
   assume_role_policy  = join("", data.aws_iam_policy_document.assume_role_policy[*].json)
-  managed_policy_arns = [aws_iam_policy.s3_access_for_sftp_users[index(local.user_names, each.value)].arn]
+  managed_policy_arns = [aws_iam_policy.s3_access_for_sftp_users[each.key].arn]
 
   permissions_boundary = var.permissions_boundary
 }
